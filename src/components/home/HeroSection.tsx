@@ -11,7 +11,7 @@ export function HeroSection() {
     <section className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-12">
       
       {/* LEFT: Main Featured Story (Takes up 2 columns) */}
-      <Link href={`/${mainArticle.category}/${mainArticle.slug}`} className="group relative md:col-span-2 overflow-hidden rounded-xl bg-slate-100 min-h-[400px] flex items-end">
+      <Link href={`/${mainArticle.category}/${mainArticle.slug}`} className="group relative md:col-span-2 overflow-hidden rounded-xl bg-slate-100 min-h-100 flex items-end">
         {/* Full Background Image */}
         <Image
           src={mainArticle.coverImage}
@@ -21,7 +21,7 @@ export function HeroSection() {
           priority
         />
         {/* Gradient Overlay so text is readable */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent" />
 
         {/* Text Content */}
         <div className="relative z-10 p-6 md:p-8">
@@ -41,14 +41,14 @@ export function HeroSection() {
       {/* RIGHT: Top Stories (Stack of 2) */}
       <div className="flex flex-col gap-8 md:gap-4">
         {sideArticles.map((article) => (
-          <Link key={article.id} href={`/${article.category}/${article.slug}`} className="group relative flex-1 overflow-hidden rounded-xl bg-slate-100 min-h-[200px] flex items-end">
+          <Link key={article.id} href={`/${article.category}/${article.slug}`} className="group relative flex-1 overflow-hidden rounded-xl bg-slate-100 min-h-50 flex items-end">
             <Image
               src={article.coverImage}
               alt={article.title}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
             
             <div className="relative z-10 p-5">
               <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
