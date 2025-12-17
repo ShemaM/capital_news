@@ -1,78 +1,71 @@
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram } from 'lucide-react';
+import Image from 'next/image';
+import { latestArticles } from '@/lib/placeholder-data';
 
-export function Footer() {
+// 1. We accept searchParams as a Promise (Next.js 15/16 standard)
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  // 2. Await the params to get the query string
+  const resolvedParams = await searchParams;
+  const query = resolvedParams.q?.toLowerCase() || '';
+
+  // 3. Filter the articles
+  const results = latestArticles.filter((article) => 
+    article.title.toLowerCase().includes(query) || 
+    article.excerpt.toLowerCase().includes(query)
+  );
+
   return (
-    <footer className="bg-slate-900 text-white pt-16 pb-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          
-          {/* Brand Column */}
-          <div className="col-span-1 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-6">
-              <div className="h-8 w-8 bg-red-600 rounded-sm flex items-center justify-center">
-                <span className="text-white font-bold font-serif text-xl">C</span>
-              </div>
-              <span className="text-xl font-bold font-serif tracking-tight">Capital News</span>
-            </Link>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Reporting on the issues that matter in the Great Lakes Region. Independent, fearless, and accurate.
-            </p>
-            <div className="flex gap-4 text-slate-400">
-              <Twitter className="h-5 w-5 hover:text-white cursor-pointer" />
-              <Facebook className="h-5 w-5 hover:text-white cursor-pointer" />
-              <Instagram className="h-5 w-5 hover:text-white cursor-pointer" />
-            </div>
-          </div>
-
-          {/* Sections */}
-          <div>
-            <h4 className="font-bold uppercase tracking-widest text-xs mb-6 text-slate-500">Sections</h4>
-            <ul className="space-y-3 text-sm text-slate-300">
-              <li><Link href="/politics" className="hover:text-red-500 transition-colors">Politics</Link></li>
-              <li><Link href="/business" className="hover:text-red-500 transition-colors">Business</Link></li>
-              <li><Link href="/tech" className="hover:text-red-500 transition-colors">Technology</Link></li>
-              <li><Link href="/lifestyle" className="hover:text-red-500 transition-colors">Lifestyle</Link></li>
-              <li><Link href="/opinion" className="hover:text-red-500 transition-colors">Opinion</Link></li>
-            </ul>
-          </div>
-
-          {/* About */}
-          <div>
-            <h4 className="font-bold uppercase tracking-widest text-xs mb-6 text-slate-500">About Us</h4>
-            <ul className="space-y-3 text-sm text-slate-300">
-              <li><Link href="/about" className="hover:text-white transition-colors">Our Mission</Link></li>
-              <li><Link href="/team" className="hover:text-white transition-colors">The Team</Link></li>
-              <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 className="font-bold uppercase tracking-widest text-xs mb-6 text-slate-500">Subscribe</h4>
-            <p className="text-slate-400 text-xs mb-4">Get the latest updates directly to your inbox.</p>
-            <form className="flex flex-col gap-2">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="bg-slate-800 border border-slate-700 text-white text-sm rounded px-4 py-2 focus:outline-none focus:border-red-600"
-              />
-              <button className="bg-red-600 text-white text-sm font-bold uppercase tracking-wider px-4 py-2 rounded hover:bg-red-700 transition-colors">
-                Subscribe
-              </button>
-            </form>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Capital News. All rights reserved.</p>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white">Terms of Service</Link>
-          </div>
-        </div>
+    <main className="container mx-auto px-4 py-12 min-h-screen">
+      <div className="mb-8 border-b border-slate-200 pb-4">
+        <h1 className="text-3xl font-serif font-black text-slate-900 mb-2">
+          Search Results
+        </h1>
+        <p className="text-slate-500">
+          Found {results.length} result{results.length !== 1 && 's'} for <span className="font-bold text-slate-900">&quot;{resolvedParams.q || ''}&quot;</span>
+        </p>
       </div>
-    </footer>
+
+      <div className="flex flex-col gap-8 max-w-4xl">
+        {results.map((article) => (
+          <Link key={article.id} href={`/${article.category}/${article.slug}`} className="group flex flex-col sm:flex-row gap-6 border-b border-slate-100 pb-8 last:border-0">
+            {/* Image Thumbnail */}
+            <div className="relative w-full sm:w-48 aspect-4/3 shrink-0 bg-slate-100 overflow-hidden rounded-md">
+              <Image 
+                src={article.coverImage} 
+                alt={article.title} 
+                fill 
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            
+            {/* Text Content */}
+            <div className="flex flex-col justify-center">
+              <span className="text-xs font-bold text-red-600 uppercase tracking-wider mb-2">
+                {article.category}
+              </span>
+              <h2 className="text-xl font-bold font-serif mb-2 group-hover:text-red-700 transition-colors">
+                {article.title}
+              </h2>
+              <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed">
+                {article.excerpt}
+              </p>
+            </div>
+          </Link>
+        ))}
+
+        {results.length === 0 && (
+          <div className="py-12 bg-slate-50 rounded-lg text-center border border-slate-100">
+             <p className="text-slate-600 font-medium">No stories found matching your criteria.</p>
+             <Link href="/" className="text-red-600 font-bold text-sm mt-4 inline-block hover:underline">
+               Return to Homepage
+             </Link>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
