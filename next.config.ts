@@ -4,13 +4,21 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "**.unsplash.com", // The "**" allows images.unsplash AND plus.unsplash
+        protocol: 'https',
+        hostname: 'images.pexels.com', // Allows Pexels links
       },
       {
-        protocol: "https",
-        hostname: "placehold.co", // Backup service for testing
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // Allows Unsplash links
       },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co', // Allows your own Supabase storage
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co', // Allows placeholder images
+      }
     ],
   },
 };

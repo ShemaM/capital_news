@@ -1,4 +1,5 @@
 'use client';
+import { supabase } from '@/lib/supabase'; 
 
 import { useState } from 'react';
 import { Save, Image as ImageIcon, User, Calendar, X } from 'lucide-react';
@@ -24,20 +25,85 @@ export default function CreatePostPage() {
     setFormData({ ...formData, title, slug });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, coverImage: previewUrl });
-    }
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, we would upload the cover image to storage here
-    console.log("Submitting Article Data:", formData);
-    alert("Editor is ready! In the next step, we'll send this data to Supabase.");
-  };
+// ... inside your component
+
+const [isUploading, setIsUploading] = useState(false);
+
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Only allow PNG, JPG, JPEG
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (!allowedTypes.includes(file.type)) {
+    alert("Please upload only PNG or JPG files.");
+    return;
+  }
+
+  try {
+    setIsUploading(true);
+    
+    // 1. Create a unique file name
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
+
+    // 2. Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('article-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    // 3. Get the Public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('article-images')
+      .getPublicUrl(filePath);
+
+    // 4. Update the form state with the REAL permanent link
+    setFormData({ ...formData, coverImage: publicUrl });
+    
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    alert('Image upload failed!');
+  } finally {
+    setIsUploading(false);
+  }
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!formData.coverImage) {
+    alert("Please upload a featured image first.");
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('posts')
+      .insert([{
+        title: formData.title,
+        slug: formData.slug,
+        content: formData.content,
+        summary: formData.excerpt,
+        category: formData.category,
+        image_url: formData.coverImage, // This is now the permanent Supabase URL
+        image_caption: formData.imageCaption,
+        is_published: true,
+        created_at: new Date().toISOString()
+      }]);
+
+    if (error) throw error;
+
+    alert("Story Published Successfully!");
+    window.location.href = '/'; // Go home to see the result
+  } catch (error) {
+    console.error('Error saving article:', error);
+    alert('Failed to publish story.');
+  }
+};
 
   const handleSaveDraft = () => {
   // In a real app, this would save to a 'drafts' table in Supabase
@@ -72,14 +138,29 @@ export default function CreatePostPage() {
           
           {/* Title Input */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <input 
-              type="text" 
-              required
+           
+            <input
+              type="text"
+              placeholder="Article Title"
+              className="w-full text-3xl font-serif font-black text-slate-900 mb-3 focus:outline-none"
               value={formData.title}
               onChange={handleTitleChange}
-              placeholder="Enter headline here..."
-              className="w-full px-4 py-3 rounded-lg border-2 border-transparent focus:border-transparent focus:ring-0 text-3xl font-black font-serif placeholder:text-slate-300"
+              aria-label="Article title"
+              title="Article title"
             />
+
+           <input 
+  type="file" 
+  accept=".png, .jpg, .jpeg" 
+  className="hidden" 
+  disabled={isUploading}
+  onChange={handleImageUpload} 
+  aria-label="Upload featured image"
+  title="Upload featured image"
+/>
+
+{isUploading && <p className="text-xs text-blue-600 mt-2 animate-pulse">Uploading to Cloud...</p>}
+
             <div className="px-4 text-xs text-slate-400 mt-1 flex items-center gap-2">
                 <span className="font-bold uppercase">Slug:</span>
                 <span className="font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">{formData.slug}</span>
@@ -140,10 +221,10 @@ export default function CreatePostPage() {
                         onChange={(e) => setFormData({...formData, category: e.target.value})}
                     >
                         <option value="politics">Politics</option>
-                        <option value="conflict">Conflict Monitor</option>
-                        <option value="human-rights">Human Rights</option>
+                        <option value="conflict">Human Rights</option>
+                        <option value="human-rights">Tech</option>
                         <option value="business">Business</option>
-                        <option value="tech">Tech</option>
+                        <option value="tech">Conflict Monitor</option>
                         <option value="diplomacy">Diplomacy</option>
                         <option value="exclusive">Exclusive</option>
                     </select>
@@ -203,6 +284,8 @@ export default function CreatePostPage() {
                       accept="image/*" 
                       className="hidden" 
                       onChange={handleImageUpload} 
+                      aria-label="Upload featured image"
+                      title="Upload featured image"
                     />
                   </label>
                 )}

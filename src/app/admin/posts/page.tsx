@@ -4,11 +4,24 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Edit, Trash2, Eye, Search, Filter, Plus } from 'lucide-react';
-import { latestArticles } from '@/lib/placeholder-data'; // Using mock data for now
+
 
 export default function AllPostsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+
+  // Article type and list — replace with real data fetching logic
+  type Article = {
+    id: string;
+    title: string;
+    coverImage?: string;
+    category: string;
+    author: { name: string };
+    publishedAt: string;
+    slug: string;
+  };
+
+  const latestArticles: Article[] = []; // TODO: populate with your articles (fetch or pass as props)
 
   // Filter logic
   const filteredPosts = latestArticles.filter((post) => {
@@ -70,7 +83,7 @@ export default function AllPostsPage() {
             <option value="politics">Politics</option>
             <option value="business">Business</option>
             <option value="tech">Tech</option>
-            <option value="conflict">Conflict</option>
+            <option value="conflict">Human Rights</option>
           </select>
         </div>
       </div>

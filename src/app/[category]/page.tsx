@@ -1,89 +1,82 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { latestArticles } from '@/lib/placeholder-data';
-import { formatDistanceToNow } from 'date-fns';
+import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+import Image from "next/image";
 
-interface PageProps {
-  params: Promise<{
-    category: string;
-  }>;
-}
+// Force fresh data
+export const revalidate = 0;
 
-export default async function CategoryPage({ params }: PageProps) {
+// The "export default" is mandatory for Next.js pages
+export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
+  const decodedCategory = decodeURIComponent(category);
 
-  // 1. Filter articles by the category in the URL
-  const categoryArticles = latestArticles.filter(
-    (article) => article.category === category
-  );
+  // 1. Fetch data from Supabase
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .ilike("category", decodedCategory)
+    .is("deleted_at", null)
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
 
-  // If the category doesn't exist or has no articles, show 404
-  // (Optional: You could remove this if you want empty categories to render)
-  if (categoryArticles.length === 0) {
-    // For now, let's just log it and maybe allow it to render an empty state
-    // notFound(); 
+  if (error) {
+    return <div className="p-20 text-center text-red-600">Database Connection Error: {error.message}</div>;
   }
 
-  // Capitalize for display (e.g., "politics" -> "Politics")
-  const title = category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ');
-
   return (
-    <main className="container mx-auto px-4 py-12 min-h-screen">
-      
-      {/* Header */}
-      <div className="mb-12 border-b border-slate-200 pb-6">
-        <h1 className="text-5xl font-black font-serif text-slate-900 mb-2">
-          {title}
-        </h1>
-        <p className="text-slate-500 text-lg">
-          Latest coverage and analysis on {title}.
-        </p>
-      </div>
-
-      {/* Grid of Articles */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-        {categoryArticles.map((article) => (
-          <Link key={article.id} href={`/${article.category}/${article.slug}`} className="group flex flex-col gap-4">
-            {/* Image */}
-            <div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-100">
-              <Image
-                src={article.coverImage}
-                alt={article.title}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                 <span>{formatDistanceToNow(new Date(article.publishedAt))} ago</span>
-                 <span>•</span>
-                 <span className="text-red-600">{article.author.name}</span>
-              </div>
-              
-              <h2 className="text-2xl font-bold font-serif leading-tight group-hover:text-red-700 transition-colors">
-                {article.title}
-              </h2>
-              
-              <p className="text-slate-600 line-clamp-3 text-sm leading-relaxed">
-                {article.excerpt}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Empty State Message */}
-      {categoryArticles.length === 0 && (
-        <div className="py-20 text-center">
-          <p className="text-slate-500 text-lg">No articles found in this category yet.</p>
-          <Link href="/" className="text-red-600 font-bold hover:underline mt-2 inline-block">
-            Back to Home
-          </Link>
+    <main className="min-h-screen bg-slate-50 py-12 font-serif">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div className="mb-10 border-b border-slate-200 pb-4">
+          <h1 className="text-4xl font-bold text-slate-900 capitalize tracking-tight">
+            {decodedCategory} News
+          </h1>
         </div>
-      )}
 
+        {!posts || posts.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <p className="text-slate-500 font-sans italic">No stories found in {decodedCategory}.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {posts.map((post) => (
+              <Link href={`/article/${post.id}`} key={post.id} className="group block h-full">
+                <article className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col hover:shadow-md transition-shadow">
+                  
+                  {/* Use Next.js Image for optimized delivery (unoptimized to avoid external loader config) */}
+                  <div className="relative h-48 bg-slate-200 overflow-hidden">
+                    {post.image_url ? (
+                      <Image
+                        src={post.image_url}
+                        alt=""
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-slate-400 text-xs font-sans">No Image</div>
+                    )}
+                  </div>
+                  
+                  <div className="p-5 flex-1 flex flex-col">
+                    <h2 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-blue-900 transition-colors">
+                      {String(post.title || "Untitled Article")}
+                    </h2>
+                    
+                    <p className="text-sm text-slate-600 line-clamp-2 mb-4 flex-1 font-sans">
+                      {String(post.summary || "Read more about this story...")}
+                    </p>
+
+                    <div className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-widest pt-4 border-t border-slate-50">
+                      {post.created_at ? new Date(post.created_at).toLocaleDateString() : "Recently Published"}
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
