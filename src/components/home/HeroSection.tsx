@@ -1,67 +1,104 @@
-import Link from 'next/link';
+'use client';
+
 import Image from 'next/image';
-import { latestArticles } from '@/lib/placeholder-data'; // Re-using our mock data
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+
+interface Article {
+  id: number | string;
+  image_url?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  category?: string | null;
+}
 
 export function HeroSection() {
-  // Logic: First article is "Hero", next two are "Sub-Hero"
-  const mainArticle = latestArticles[0];
-  const sideArticles = latestArticles.slice(1, 3);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchHero() {
+      const { data } = await supabase
+        .from('posts')
+        .select('*')
+        .is('deleted_at', null)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (data) setArticles(data);
+      setLoading(false);
+    }
+    fetchHero();
+  }, []);
+
+  if (loading || articles.length === 0) return <div className="h-96 w-full bg-slate-100 animate-pulse rounded-2xl" />;
+
+  const [main, ...others] = articles;
 
   return (
-    <section className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-12">
-      
-      {/* LEFT: Main Featured Story (Takes up 2 columns) */}
-      <Link href={`/${mainArticle.category}/${mainArticle.slug}`} className="group relative md:col-span-2 overflow-hidden rounded-xl bg-slate-100 min-h-100 flex items-end">
-        {/* Full Background Image */}
-        <Image
-          src={mainArticle.coverImage}
-          alt={mainArticle.title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority
-        />
-        {/* Gradient Overlay so text is readable */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent" />
-
-        {/* Text Content */}
-        <div className="relative z-10 p-6 md:p-8">
-          <span className="mb-3 inline-block rounded bg-red-600 px-3 py-1 text-xs font-bold text-white uppercase tracking-wider">
-            Breaking
-          </span>
-          <h2 className="mb-2 text-3xl font-black font-serif text-white md:text-5xl leading-tight group-hover:underline decoration-red-500 decoration-2 underline-offset-4">
-            {mainArticle.title}
-          </h2>
-          <p className="text-slate-200 md:text-lg max-w-2xl line-clamp-2">
-            {mainArticle.excerpt}
-          </p>
-        </div>
-      </Link>
-
-
-      {/* RIGHT: Top Stories (Stack of 2) */}
-      <div className="flex flex-col gap-8 md:gap-4">
-        {sideArticles.map((article) => (
-          <Link key={article.id} href={`/${article.category}/${article.slug}`} className="group relative flex-1 overflow-hidden rounded-xl bg-slate-100 min-h-50 flex items-end">
-            <Image
-              src={article.coverImage}
-              alt={article.title}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
-            
-            <div className="relative z-10 p-5">
-              <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
-                {article.category}
-              </span>
-              <h3 className="mt-1 text-xl font-bold font-serif text-white leading-tight group-hover:text-red-200">
-                {article.title}
-              </h3>
+    <section className="mb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* MAIN FEATURE: Editorial Style */}
+        <div className="lg:col-span-8 group">
+          <Link href={`/article/${main.id}`}>
+            <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-200 mb-6">
+              {main.image_url ? (
+                <Image
+                  src={main.image_url}
+                  alt={main.title ?? ''}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-200" />
+              )}
+              <div className="absolute top-4 left-4">
+                <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-sm">
+                  Top Story
+                </span>
+              </div>
             </div>
+            <h1 className="text-4xl md:text-6xl font-serif font-black text-slate-900 mb-4 leading-[1.1] group-hover:text-red-700 transition-colors">
+              {main.title}
+            </h1>
+            <p className="text-lg text-slate-600 font-sans leading-relaxed line-clamp-3 max-w-3xl">
+              {main.summary}
+            </p>
           </Link>
-        ))}
-      </div>
+        </div>
 
+        {/* SIDEBAR FEATURES: Compact Vertical Stack */}
+        <div className="lg:col-span-4 space-y-8 border-l border-slate-200 lg:pl-8">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Trending in {main.category}</h2>
+          {others.map((post) => (
+            <Link key={post.id} href={`/article/${post.id}`} className="group block">
+              <div className="flex gap-4 items-start">
+                <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-slate-100 relative">
+                  {post.image_url ? (
+                    <Image
+                      src={post.image_url}
+                      alt={post.title ?? ''}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-100" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-red-600 uppercase mb-1 block tracking-wider">{post.category}</span>
+                  <h3 className="font-serif font-bold text-lg leading-snug group-hover:underline decoration-red-500">
+                    {post.title}
+                  </h3>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+      </div>
     </section>
   );
 }
