@@ -1,15 +1,18 @@
 import { supabase } from "@/lib/supabase";
 import { ArticleCard } from "@/components/article/ArticleCard";
-import { SupabaseArticle } from "@/lib/definitions";
 
-// Revalidate every minute
-export const revalidate = 60;
+export const revalidate = 0;
 
-export default async function CategoryPage({ params }: { params: { category: string } }) {
-  const { category } = params;
+// 1. Type params as a Promise
+export default async function CategoryPage({ 
+  params 
+}: { 
+  params: Promise<{ category: string }> 
+}) {
+  // 2. AWAIT the params here. This fixes the crash.
+  const { category } = await params;
   const decodedCategory = decodeURIComponent(category);
 
-  // Fetch articles from Supabase matching the current category
   const { data: posts, error } = await supabase
     .from("posts")
     .select("*")
@@ -19,32 +22,26 @@ export default async function CategoryPage({ params }: { params: { category: str
     .order("created_at", { ascending: false });
 
   if (error) {
-    return <div className="p-20 text-center text-red-600 font-sans">Database Error: {error.message}</div>;
+    return <div className="p-20 text-center text-red-600">Error: {error.message}</div>;
   }
 
   return (
     <main className="min-h-screen bg-slate-50 py-12 font-serif">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="mb-12 border-b-4 border-slate-900 pb-4 flex justify-between items-end">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="mb-12 border-b-4 border-slate-900 pb-4">
           <h1 className="text-5xl font-black text-slate-900 capitalize tracking-tighter">
             {decodedCategory}
           </h1>
-          <span className="text-slate-400 font-sans font-bold text-xs uppercase tracking-[0.3em]">
-            Capital News Dispatch
-          </span>
         </div>
 
-        {/* Article Grid */}
         {!posts || posts.length === 0 ? (
-          <div className="text-center py-32 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-            <p className="text-slate-400 font-sans italic text-lg">No stories currently filed in {decodedCategory}.</p>
+          <div className="p-10 text-center border-2 border-dashed border-slate-300 rounded-xl">
+            <p className="text-slate-500 italic">No stories found in {decodedCategory}.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {posts.map((post: SupabaseArticle) => (
-              <ArticleCard article={post} key={post.id} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {posts.map((post) => (
+              <ArticleCard key={post.id} article={post} />
             ))}
           </div>
         )}

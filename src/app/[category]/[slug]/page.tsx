@@ -1,111 +1,97 @@
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
-import { Calendar, User, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import DOMPurify from 'isomorphic-dompurify';
-import { EngagementSection } from "@/components/article/EngagementSection";
-import { SupabaseArticle } from "@/lib/definitions";
 
-
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function ArticlePage({ 
   params 
 }: { 
-  params: { category: string; slug: string } 
+  params: Promise<{ category: string; slug: string }> 
 }) {
-  const { category, slug } = params;
-  
-  // Normalize to lowercase
-  const lowerCategory = decodeURIComponent(category).toLowerCase();
-  const lowerSlug = decodeURIComponent(slug).toLowerCase();
+  // 1. Await params to access category and slug (Required for Next.js 15+)
+  const { category, slug } = await params;
+  const decodedCategory = decodeURIComponent(category);
+  const categoryForQuery = decodedCategory.replace(/-/g, ' ');
 
+  // DEBUG LOGS: Check your terminal/server console (where you ran npm run dev)
+  console.log("--- DEBUG START ---");
+  console.log("URL Category:", decodedCategory);
+  console.log("URL Slug:", slug);
+
+  // 2. Fetch the article
   const { data: post, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("slug", lowerSlug)
-    .eq("category", lowerCategory)
-    .is("deleted_at", null)
-    .eq("is_published", true)
+    .ilike("category", categoryForQuery) // ignore 'Politics' vs 'politics'
+    .eq("slug", slug)                   // must match database exactly
     .single();
+
+  if (error) {
+    console.log("Supabase Error:", error.message);
+  }
   
-  if (error || !post) {
-    console.error(`Failed to fetch article for slug "${lowerSlug}" and category "${lowerCategory}"`, error);
-    return notFound();
+  if (!post) {
+    console.log("Result: No article found in database for this slug.");
+    return notFound(); // This triggers your 404 page
   }
 
-  return renderArticle(post);
-}
-
-function renderArticle(post: SupabaseArticle) {
-  // Sanitize the HTML content before rendering
-  const sanitizedHtml = post.content ? DOMPurify.sanitize(post.content) : '';
+  console.log("Result: Success! Found article:", post.title);
+  console.log("--- DEBUG END ---");
 
   return (
-    <main className="min-h-screen bg-[#fffdfa] py-12 font-serif">
+    <main className="min-h-screen bg-[#fcfcfc] py-12 font-serif">
       <article className="max-w-3xl mx-auto px-4">
         
+        {/* Navigation */}
         <Link 
-          href={`/${post.category}`} 
-          className="flex items-center gap-2 text-red-600 font-sans font-bold text-xs uppercase tracking-widest mb-8 hover:underline hover:no-underline"
+          href={`/${category}`} 
+          className="flex items-center gap-2 text-red-600 font-sans font-bold text-xs uppercase tracking-widest mb-8 hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
-          Back to {post.category}
+          Back to {decodedCategory}
         </Link>
 
-        <header className="mb-10">
-          <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] mb-6">
+        {/* Header */}
+        <header className="mb-8">
+          <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight mb-6">
             {post.title}
           </h1>
           
-          <div className="flex flex-wrap items-center gap-6 text-sm font-sans font-bold text-slate-500 uppercase tracking-tighter border-y border-slate-200 py-4">
+          <div className="flex flex-wrap items-center gap-6 text-sm font-sans font-bold text-slate-500 uppercase tracking-tighter border-y border-slate-100 py-4">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-red-600" />
               <span>{post.author_name || "Capital News Desk"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-red-600" />
-              <span>{new Date(post.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <span>{new Date(post.created_at).toLocaleDateString('en-GB')}</span>
             </div>
           </div>
         </header>
 
+        {/* Featured Image */}
         {post.image_url && (
-          <figure className="mb-12">
-            <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+          <figure className="mb-10">
+            <div className="relative aspect-video rounded-xl overflow-hidden shadow-xl border border-slate-200">
               <Image
                 src={post.image_url}
                 alt={post.title}
                 fill
-                className="w-full h-full object-cover"
-                priority
-                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+                unoptimized
               />
             </div>
-            {(post.image_caption || post.image_credit) && (
-              <figcaption className="mt-4 text-sm text-slate-500 font-sans italic flex justify-between">
-                <span>{post.image_caption}</span>
-                <span className="font-bold text-slate-400 uppercase text-[10px]">{post.image_credit}</span>
-              </figcaption>
-            )}
           </figure>
         )}
 
-        {sanitizedHtml && (
-          <div 
-            className="prose prose-lg prose-slate max-w-none font-sans leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-          />
-        )}
-
-        <EngagementSection articleId={Number(post.id)} initialLikes={post.likes || 0} />
-
-        <div className="mt-20 pt-8 border-t-2 border-slate-900 flex justify-center">
-           <div className="h-10 w-10 bg-red-600 flex items-center justify-center rounded-sm">
-              <span className="text-white font-black text-2xl font-serif">C</span>
-           </div>
-        </div>
+        {/* Article Body */}
+        <div 
+          className="prose prose-lg prose-slate max-w-none font-sans leading-relaxed text-slate-800"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
       </article>
     </main>
   );
