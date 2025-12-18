@@ -19,12 +19,17 @@ export default function CreatePostPage() {
     imageCredit: '',
   });
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const title = e.target.value;
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    setFormData({ ...formData, title, slug });
-  };
+ const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const title = e.target.value;
+  
+  // This turns "Mikenke Village Bombed!" into "mikenke-village-bombed"
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/(^-|-$)/g, '');    // Remove leading/trailing hyphens
 
+  setFormData({ ...formData, title, slug });
+};
 
 // ... inside your component
 
@@ -82,18 +87,16 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   try {
     const { error } = await supabase
-      .from('posts')
-      .insert([{
-        title: formData.title,
-        slug: formData.slug,
-        content: formData.content,
-        summary: formData.excerpt,
-        category: formData.category,
-        image_url: formData.coverImage, // This is now the permanent Supabase URL
-        image_caption: formData.imageCaption,
-        is_published: true,
-        created_at: new Date().toISOString()
-      }]);
+  .from('posts')
+  .insert([{
+    title: formData.title,
+    slug: formData.slug, // Now sending the slug to the new column!
+    category: formData.category,
+    image_url: formData.coverImage,
+    content: formData.content,
+    summary: formData.excerpt,
+    is_published: true,
+  }]);
 
     if (error) throw error;
 

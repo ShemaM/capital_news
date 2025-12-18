@@ -1,158 +1,137 @@
-import { supabase } from "@/lib/supabase";
-import Link from "next/link";
-import Image from "next/image";
+import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { Sparkles, Snowflake, Gift } from 'lucide-react';
 
-// 1. Force the page to act dynamically (fetches fresh news every time)
 export const revalidate = 0;
 
-export default async function Home() {
-  // 2. Fetch the articles from Supabase
-  const { data: posts } = await supabase
-    .from("posts")
-    .select("*")
-    .is("deleted_at", null) // Only active posts
-    .eq("is_published", true)
-    .order("created_at", { ascending: false }); // Newest first
+export default async function HomePage() {
+  const { data: articles, error } = await supabase
+    .from('posts')
+    .select('*')
+    .is('deleted_at', null)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false });
 
-  // Handle empty state
-  if (!posts || posts.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-3xl font-serif font-bold text-slate-900 mb-2">Capital News</h1>
-          <p className="text-slate-500">No news articles published yet.</p>
-          <Link href="/admin" className="text-blue-600 hover:underline mt-4 inline-block">
-            Go to Admin Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (error || !articles || articles.length === 0) return null;
 
-  // 3. Layout Strategy
-  const mainPost = posts[0]; // The newest story
-  const sidePosts = posts.slice(1, 4); // Next 3 stories
-  const olderPosts = posts.slice(4); // Everything else
+  const breaking = articles[0];
+  const festiveStories = articles.slice(1, 5);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-screen bg-[#fffdfa]"> {/* Warm parchment background */}
       
-      {/* --- HERO SECTION --- */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          
-          {/* Main Article (Left) */}
-          <div className="lg:col-span-2 group cursor-pointer">
-            <Link href={`/article/${mainPost.id}`}>
-              <div className="relative overflow-hidden rounded-xl shadow-sm mb-4 h-100">
-                {mainPost.image_url ? (
-                  <Image
-                    src={mainPost.image_url}
-                    alt={mainPost.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">No Image</div>
-                )}
-                <div className="absolute bottom-0 left-0 bg-blue-900 text-white text-xs font-bold px-3 py-1 uppercase tracking-wider">
-                  {mainPost.category}
-                </div>
-              </div>
+      {/* 1. FESTIVE TOP BAR */}
+      <div className="bg-emerald-900 text-amber-200 py-2 border-b-2 border-amber-500/50">
+        <div className="container mx-auto px-4 flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.3em]">
+          <div className="flex items-center gap-2">
+            <Snowflake className="h-3 w-3 animate-spin-slow" />
+            <span>Seasonal Greetings from the Newsroom</span>
+          </div>
+          <div className="hidden md:block">
+            {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Peace in the Great Lakes</span>
+            <Sparkles className="h-3 w-3 text-amber-400" />
+          </div>
+        </div>
+      </div>
 
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-2 group-hover:text-blue-900 transition-colors leading-tight">
-                {mainPost.title}
-              </h1>
-              
-              {mainPost.subtitle && (
-                <p className="text-lg text-slate-600 italic font-serif mb-3 border-l-4 border-blue-900 pl-3">
-                  {mainPost.subtitle}
-                </p>
-              )}
-              
-              <p className="text-slate-500 leading-relaxed line-clamp-3">
-                {mainPost.summary}
-              </p>
-              <div className="mt-4 text-xs text-slate-400 font-bold uppercase tracking-widest">
-                {new Date(mainPost.created_at).toLocaleDateString()}
+      <div className="container mx-auto px-4 py-12">
+        
+        {/* 2. THE HOLIDAY WELCOME */}
+        <header className="text-center mb-16 relative">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-10 pointer-events-none">
+             <Gift className="h-40 w-40 text-emerald-800" />
+          </div>
+          <h1 className="text-7xl font-serif font-black text-slate-900 tracking-tighter mb-2 italic">
+            Capital <span className="text-emerald-800">News</span>
+          </h1>
+          <div className="flex items-center justify-center gap-4">
+            <div className="h-px w-20 bg-amber-500"></div>
+            <p className="text-amber-700 font-sans font-bold text-xs uppercase tracking-widest">
+              Welcome Home for the Festivities
+            </p>
+            <div className="h-px w-20 bg-amber-500"></div>
+          </div>
+        </header>
+
+        {/* 3. PACKED HERO GRID WITH FESTIVE ACCENTS */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
+          {/* Breaking/Priority Story */}
+          <div className="lg:col-span-8 group relative">
+            <Link href={`/article/${breaking.id}`}>
+              <div className="relative aspect-video overflow-hidden rounded-3xl border-4 border-amber-100 shadow-2xl">
+                <Image
+                  src={breaking.image_url || '/placeholder.jpg'}
+                  alt={breaking.title || 'Breaking story image'}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-all duration-1000"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-emerald-950/90 via-transparent to-transparent"></div>
+                <div className="absolute bottom-8 left-8 right-8">
+                  <span className="bg-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">
+                    Critical Update
+                  </span>
+                  <h2 className="text-4xl md:text-5xl font-serif font-black text-white leading-tight">
+                    {breaking.title}
+                  </h2>
+                </div>
               </div>
             </Link>
           </div>
 
-          {/* Sidebar (Right) */}
-          <div className="space-y-6">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 border-b border-slate-200 pb-2 mb-4">
-              Top Stories
-            </h2>
-            
-            {sidePosts.map((post) => (
-              <Link href={`/article/${post.id}`} key={post.id} className="block group">
-                <div className="flex gap-4 items-start">
-                  {post.image_url && (
-                    <Image
-                      src={post.image_url}
-                      alt={post.title}
-                      width={96}
-                      height={96}
-                      className="object-cover rounded bg-slate-200 shrink-0"
-                      unoptimized
-                    />
-                  )}
-                  <div>
-                    <span className="text-[10px] text-blue-700 font-bold uppercase block mb-1">
-                      {post.category}
-                    </span>
-                    <h3 className="font-serif font-bold text-lg leading-tight group-hover:text-blue-800 transition-colors">
-                      {post.title}
-                    </h3>
-                  </div>
+          {/* Festive Column: Developing Stories */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <h3 className="flex items-center gap-2 text-emerald-800 font-bold uppercase text-xs tracking-widest border-b border-amber-200 pb-2">
+              <Sparkles className="h-4 w-4" /> Latest Briefings
+            </h3>
+            {festiveStories.map((post) => (
+              <Link key={post.id} href={`/article/${post.id}`} className="group block border-b border-slate-100 pb-4 last:border-0">
+                <span className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter mb-1 block">{post.category}</span>
+                <h4 className="font-serif font-bold text-lg leading-tight group-hover:text-emerald-700 transition-colors">
+                  {post.title}
+                </h4>
+              </Link>
+            ))}
+            <div className="mt-auto p-6 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
+               <p className="text-xs text-emerald-800 font-medium italic">&ldquo;Dedicated to truth, even in the season of celebration.&rdquo;</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. DENSE SEASONAL FEED */}
+        <section className="border-t-2 border-double border-amber-200 pt-16">
+          <div className="flex items-center justify-between mb-12">
+            <h2 className="text-3xl font-serif font-black text-slate-900">The Newsroom Feed</h2>
+            <Link href="/archive" className="text-xs font-bold uppercase text-amber-700 hover:text-emerald-800 transition-colors">
+              Browse All Stories →
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {articles.slice(5, 13).map((post) => (
+              <Link key={post.id} href={`/article/${post.id}`} className="group flex flex-col gap-4">
+                <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
+                  <Image
+                    src={post.image_url || '/placeholder.jpg'}
+                    alt={post.title || ''}
+                    fill
+                    className="object-cover group-hover:opacity-80 transition-opacity"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-md leading-snug group-hover:underline decoration-amber-500">
+                    {post.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-2 line-clamp-2 font-sans">{post.summary}</p>
                 </div>
               </Link>
             ))}
-
-            {sidePosts.length === 0 && (
-               <div className="p-6 bg-slate-100 rounded text-center text-slate-400 text-sm italic">
-                 More news coming soon...
-               </div>
-            )}
           </div>
-        </div>
-
-        {/* --- GRID SECTION (Older Posts) --- */}
-        {olderPosts.length > 0 && (
-          <div className="border-t border-slate-200 pt-10">
-            <h2 className="text-2xl font-serif font-bold mb-6">Latest News</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {olderPosts.map((post) => (
-                <Link href={`/article/${post.id}`} key={post.id} className="group">
-                  <div className="overflow-hidden rounded-lg mb-3">
-                    {post.image_url && (
-                      <Image
-                        src={post.image_url}
-                        alt={post.title}
-                        width={640}
-                        height={192}
-                        className="w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        unoptimized
-                      />
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-500 mb-1 font-bold uppercase">
-                    {post.category} • {new Date(post.created_at).toLocaleDateString()}
-                  </div>
-                  <h3 className="text-xl font-serif font-bold leading-tight group-hover:text-blue-800">
-                    {post.title}
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-2 line-clamp-2">
-                    {post.summary}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

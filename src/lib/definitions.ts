@@ -3,15 +3,19 @@ export interface Author {
   avatar?: string;
 }
 
-export interface Article {
-  id: string;
-  slug: string;
+export interface SupabaseArticle {
+  id: number | string;
   title: string;
-  excerpt: string;
-  coverImage: string;
-  imageCaption?: string; // Optional (?) because not every image needs one
-  imageCredit?: string;  // e.g. "AFP / Getty Images"
-  category: 'politics' | 'human-rights' | 'exclusive' | 'diplomacy' | 'business' | 'tech';
-  author: Author;
-  publishedAt: string;
+  summary: string;
+  category: string;
+  slug: string;
+  image_url: string | null;
+  author_name: string | null;
+  created_at: string;
+  is_published: boolean;
+  deleted_at: string | null;
+  content?: string;
+  image_caption?: string;
+  image_credit?: string;
+  likes?: number;
 }

@@ -11,6 +11,9 @@ interface Article {
   title?: string | null;
   summary?: string | null;
   category?: string | null;
+  slug?: string | null;
+  author_name?: string | null;
+  created_at?: string | null;
 }
 
 export function HeroSection() {
@@ -32,7 +35,11 @@ export function HeroSection() {
     fetchHero();
   }, []);
 
-  if (loading || articles.length === 0) return <div className="h-96 w-full bg-slate-100 animate-pulse rounded-2xl" />;
+  if (loading) return <div className="h-96 w-full bg-slate-100 animate-pulse rounded-2xl" />;
+  
+  if (articles.length === 0) return <div className="h-96 w-full bg-slate-100 rounded-2xl flex items-center justify-center">
+    <p className="text-slate-400 font-sans">No featured articles available</p>
+  </div>;
 
   const [main, ...others] = articles;
 
@@ -42,7 +49,7 @@ export function HeroSection() {
         
         {/* MAIN FEATURE: Editorial Style */}
         <div className="lg:col-span-8 group">
-          <Link href={`/article/${main.id}`}>
+          <Link href={`/${main.category}/${main.slug}`}>
             <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-200 mb-6">
               {main.image_url ? (
                 <Image
@@ -50,9 +57,13 @@ export function HeroSection() {
                   alt={main.title ?? ''}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 66vw"
+                  priority
                 />
               ) : (
-                <div className="w-full h-full bg-slate-200" />
+                <div className="w-full h-full bg-linear-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                  <span className="text-slate-400 font-sans text-sm">Featured Image</span>
+                </div>
               )}
               <div className="absolute top-4 left-4">
                 <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-sm">
@@ -71,9 +82,15 @@ export function HeroSection() {
 
         {/* SIDEBAR FEATURES: Compact Vertical Stack */}
         <div className="lg:col-span-4 space-y-8 border-l border-slate-200 lg:pl-8">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Trending in {main.category}</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
+            Trending in {main.category}
+          </h2>
           {others.map((post) => (
-            <Link key={post.id} href={`/article/${post.id}`} className="group block">
+            <Link 
+              key={post.id} 
+              href={`/${post.category}/${post.slug}`} 
+              className="group block hover:no-underline"
+            >
               <div className="flex gap-4 items-start">
                 <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-slate-100 relative">
                   {post.image_url ? (
@@ -81,17 +98,23 @@ export function HeroSection() {
                       src={post.image_url}
                       alt={post.title ?? ''}
                       fill
-                      className="object-cover group-hover:scale-110 transition-transform"
+                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      sizes="96px"
                     />
                   ) : (
-                    <div className="w-full h-full bg-slate-100" />
+                    <div className="w-full h-full bg-linear-to-br from-slate-100 to-slate-200" />
                   )}
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-red-600 uppercase mb-1 block tracking-wider">{post.category}</span>
-                  <h3 className="font-serif font-bold text-lg leading-snug group-hover:underline decoration-red-500">
+                  <span className="text-[10px] font-bold text-red-600 uppercase mb-1 block tracking-wider">
+                    {post.category}
+                  </span>
+                  <h3 className="font-serif font-bold text-lg leading-snug text-slate-900 group-hover:text-red-700 transition-colors">
                     {post.title}
                   </h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    {post.summary}
+                  </p>
                 </div>
               </div>
             </Link>
