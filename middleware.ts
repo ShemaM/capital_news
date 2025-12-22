@@ -4,7 +4,8 @@ const isProtected = createRouteMatcher([
   '/admin(.*)',
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default clerkMiddleware(async (auth: () => PromiseLike<{ userId: any; redirectToSignIn: any; }> | { userId: any; redirectToSignIn: any; }, req: any) => {
   if (isProtected(req)) {
     // 1. Destructure the helpers we need
     const { userId, redirectToSignIn } = await auth();
