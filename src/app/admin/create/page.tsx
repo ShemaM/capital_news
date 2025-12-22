@@ -1,17 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+// FIX 1: Use the function name compatible with your installed version
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Send, Save, Loader2, Bold, Italic, Quote, Globe, Lock, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CreatePostPage() {
   const router = useRouter();
+  
+  // FIX 1: Initialize the client using the older naming convention and provide required env vars
+  const [supabase] = useState(() =>
+    createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+    )
+  );
+  
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false); // New state for image upload
+  const [uploading, setUploading] = useState(false);
 
-  // STATE MATCHES DATABASE SCHEMA EXACTLY
   const [formData, setFormData] = useState({
     title: '',          
     slug: '',           
@@ -30,42 +39,33 @@ export default function CreatePostPage() {
     setFormData(prev => ({ ...prev, title, slug }));
   };
 
-  // NEW: Handle Image Upload to Supabase Storage
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      if (!e.target.files || e.target.files.length === 0) {
-        return;
-      }
-      setUploading(true);
-      
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
+      if (!e.target.files || e.target.files.length === 0) return;
 
-      // 1. Upload to "post-images" bucket
+      setUploading(true);
+      const file = e.target.files[0];
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = fileName;
+
       const { error: uploadError } = await supabase.storage
-        .from('post-images') // Make sure this matches your Supabase Bucket name
+        .from('post-images')
         .upload(filePath, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // 2. Get the Public URL
       const { data } = supabase.storage
         .from('post-images')
         .getPublicUrl(filePath);
 
-      // 3. Auto-fill the URL field
       setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
       
+    // FIX 2: Type 'error' as unknown instead of any
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert('Error uploading image: ' + error.message);
-      } else {
-        alert('Error uploading image');
-      }
+      const message = error instanceof Error ? error.message : 'Unknown upload error';
+      alert('Error uploading image: ' + message);
     } finally {
       setUploading(false);
     }
@@ -84,44 +84,55 @@ export default function CreatePostPage() {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await supabase.from('posts').insert([{
-      title: formData.title,
-      slug: formData.slug,
-      category: formData.category,
-      summary: formData.summary,
-      content: formData.content,
-      image_url: formData.image_url,
-      subtitle: formData.subtitle,
-      image_caption: formData.image_caption,
-      is_published: formData.is_published,
-    }]);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Session expired. Please log in again.");
+      }
 
-    if (!error) {
-      router.push('/admin/posts'); 
+      const { error } = await supabase.from('posts').insert([{
+        title: formData.title,
+        slug: formData.slug,
+        category: formData.category,
+        summary: formData.summary,
+        content: formData.content,
+        image_url: formData.image_url,
+        subtitle: formData.subtitle,
+        image_caption: formData.image_caption,
+        is_published: formData.is_published,
+        author_id: user.id
+      }]);
+
+      if (error) throw error;
+
+      router.push('/admin'); 
       router.refresh(); 
-    } else {
-      alert('Database Error: ' + error.message);
+      
+    // FIX 2: Type 'error' as unknown to satisfy TypeScript strict mode
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown database error';
+      alert('Database Error: ' + message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 font-sans">
       <div className="max-w-4xl mx-auto px-6">
-        <Link href="/admin/posts" className="flex items-center gap-2 text-slate-500 mb-8 font-bold text-xs uppercase">
-          <ArrowLeft className="h-4 w-4"/> Back to All Posts
+        <Link href="/admin" className="flex items-center gap-2 text-slate-500 mb-8 font-bold text-xs uppercase hover:text-red-600 transition-colors">
+          <ArrowLeft className="h-4 w-4"/> Back to Dashboard
         </Link>
         
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-lg border border-slate-200 space-y-6">
           
-          {/* TOP BAR */}
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-black font-serif text-slate-900">Create Post</h1>
               <p className="text-slate-500 text-sm mt-1">New Article Entry</p>
             </div>
             
-            {/* STATUS TOGGLE */}
             <div className="flex bg-slate-100 p-1 rounded-lg">
               <button
                 type="button"
@@ -140,7 +151,6 @@ export default function CreatePostPage() {
             </div>
           </div>
 
-          {/* ROW 1 */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Headline</label>
@@ -152,19 +162,16 @@ export default function CreatePostPage() {
             </div>
           </div>
 
-          {/* ROW 2 */}
           <div>
-            <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Subtitle / Deck</label>
-            <input type="text" value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} className="w-full p-3 border rounded" placeholder="A short description that appears below the headline..." />
+            <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Subtitle</label>
+            <input type="text" value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} className="w-full p-3 border rounded" placeholder="A short description..." />
           </div>
 
-          {/* ROW 3: CATEGORY & IMAGE UPLOAD */}
           <div className="grid md:grid-cols-2 gap-6">
              <div>
               <label htmlFor="category" className="text-xs font-bold uppercase text-slate-500 block mb-2">Category</label>
               <select 
                 id="category"
-                title="Category"
                 value={formData.category} 
                 onChange={e => setFormData({...formData, category: e.target.value})} 
                 className="w-full p-3 border rounded capitalize bg-white font-bold text-slate-900"
@@ -174,31 +181,23 @@ export default function CreatePostPage() {
                 <option value="technology">Technology</option>
                 <option value="human rights">Human Rights</option>
                 <option value="business">Business</option>
-                <option value="exclusives">Exclusives</option>
+                <option value="exclusive">Exclusive</option>
               </select>
              </div>
              
-             {/* NEW IMAGE UPLOAD SECTION */}
              <div>
                <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Cover Image</label>
-               
                <div className="flex gap-2 mb-2">
                  <input 
                     type="text" 
                     value={formData.image_url} 
                     onChange={e => setFormData({...formData, image_url: e.target.value})} 
                     className="flex-1 p-3 border rounded text-sm text-slate-600" 
-                    placeholder="https:// or upload ->" 
+                    placeholder="https://..." 
                  />
                  <label className={`cursor-pointer bg-slate-900 text-white px-4 rounded flex items-center justify-center hover:bg-slate-800 transition-colors ${uploading ? 'opacity-50' : ''}`}>
                     {uploading ? <Loader2 className="animate-spin h-5 w-5" /> : <UploadCloud className="h-5 w-5" />}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleImageUpload} 
-                      disabled={uploading}
-                      className="hidden" 
-                    />
+                    <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
                  </label>
                </div>
                {formData.image_url && (
@@ -209,32 +208,28 @@ export default function CreatePostPage() {
              </div>
           </div>
 
-          {/* ROW 4 */}
           <div>
             <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Image Caption</label>
-            <input type="text" value={formData.image_caption} onChange={e => setFormData({...formData, image_caption: e.target.value})} className="w-full p-3 border rounded text-sm" placeholder="Photo credit or description..." />
+            <input type="text" value={formData.image_caption} onChange={e => setFormData({...formData, image_caption: e.target.value})} className="w-full p-3 border rounded text-sm" placeholder="Photo credit..." />
           </div>
 
-          {/* ROW 5 */}
           <div>
              <label className="text-xs font-bold uppercase text-slate-500 block mb-2">Summary</label>
-             <textarea rows={3} value={formData.summary} onChange={e => setFormData({...formData, summary: e.target.value})} className="w-full p-3 border rounded" placeholder="Brief summary for home page..." />
+             <textarea rows={3} value={formData.summary} onChange={e => setFormData({...formData, summary: e.target.value})} className="w-full p-3 border rounded" placeholder="Brief summary..." />
           </div>
 
-          {/* ROW 6 */}
           <div>
              <div className="flex justify-between items-end mb-2">
                <label className="text-xs font-bold uppercase text-slate-500">Story Content</label>
                <div className="flex gap-2">
-                 <button type="button" aria-label="Bold" title="Bold" onClick={() => formatText('b')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Bold className="h-4 w-4"/></button>
-                 <button type="button" aria-label="Italic" title="Italic" onClick={() => formatText('i')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Italic className="h-4 w-4"/></button>
-                 <button type="button" aria-label="Blockquote" title="Blockquote" onClick={() => formatText('blockquote')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Quote className="h-4 w-4"/></button>
+                 <button type="button" onClick={() => formatText('b')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Bold className="h-4 w-4"/></button>
+                 <button type="button" onClick={() => formatText('i')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Italic className="h-4 w-4"/></button>
+                 <button type="button" onClick={() => formatText('blockquote')} className="p-1 bg-slate-100 rounded hover:bg-slate-200"><Quote className="h-4 w-4"/></button>
                </div>
              </div>
              <textarea id="editor" rows={12} required value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full p-4 border rounded font-serif text-lg leading-relaxed" placeholder="Write your story..." />
           </div>
 
-          {/* SUBMIT BUTTON */}
           <button 
             type="submit" 
             disabled={loading} 

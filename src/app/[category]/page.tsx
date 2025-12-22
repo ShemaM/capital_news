@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { ArticleCard } from "@/components/article/ArticleCard";
 
+
 export const revalidate = 0;
 
 // 1. Type params as a Promise

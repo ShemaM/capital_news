@@ -1,11 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, PenTool, FileText, Settings, LogOut } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+// FIX: Essential import for handling auth
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { LayoutDashboard, PenTool, FileText, Settings, LogOut, Loader2 } from 'lucide-react';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  // 1. Initialize Supabase Client
+  const [supabase] = useState(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+  ));
+  const [loading, setLoading] = useState(false);
 
   const navItems = [
     { name: 'Dashboard', href: '/admin', icon: <LayoutDashboard size={20} /> },
@@ -13,6 +24,27 @@ export default function AdminSidebar() {
     { name: 'All Posts', href: '/admin/posts', icon: <FileText size={20} /> },
     { name: 'Settings', href: '/admin/settings', icon: <Settings size={20} /> },
   ];
+
+  // 2. The Logout Logic
+  const handleSignOut = async () => {
+    try {
+      setLoading(true);
+      
+      // A. Kill the session in Supabase
+      await supabase.auth.signOut();
+      
+      // B. Force Next.js to dump the cached "Admin" state
+      router.refresh();
+      
+      // C. Redirect to Login
+      router.push('/login');
+      
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('Error signing out');
+      setLoading(false);
+    }
+  };
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col h-screen fixed left-0 top-0 border-r border-slate-800">
@@ -43,9 +75,13 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-800">
-        <button className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 w-full transition-colors text-sm font-bold uppercase">
-          <LogOut size={20} />
-          Sign Out
+        <button 
+          onClick={handleSignOut}
+          disabled={loading}
+          className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 w-full transition-colors text-sm font-bold uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 size={20} className="animate-spin" /> : <LogOut size={20} />}
+          {loading ? 'Signing Out...' : 'Sign Out'}
         </button>
       </div>
     </aside>

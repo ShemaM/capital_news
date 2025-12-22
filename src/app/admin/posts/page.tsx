@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Edit, Trash2, Globe, Lock } from 'lucide-react';
+import { Edit, Trash2, Globe, Lock, ArchiveRestore } from 'lucide-react';
 import Link from 'next/link';
 
 interface Post {
@@ -17,28 +17,28 @@ interface Post {
 
 export default function AllPostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all'); // 'all', 'published', 'draft'
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   async function fetchPosts() {
     const { data } = await supabase
       .from('posts')
       .select('*')
-      .is('deleted_at', null)
+      .is('deleted_at', null) // Only show active posts
       .order('created_at', { ascending: false });
     if (data) setPosts(data);
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPosts();
-    }, 0);
-    return () => clearTimeout(timer);
+    const load = async () => {
+      await fetchPosts();
+    };
+    void load();
   }, []);
 
   const handleDelete = async (id: number) => {
     if(!confirm("Are you sure? This moves the post to trash.")) return;
     await supabase.from('posts').update({ deleted_at: new Date().toISOString() }).eq('id', id);
-    fetchPosts(); // Refresh
+    fetchPosts(); 
   };
 
   const filteredPosts = posts.filter(post => {
@@ -54,9 +54,15 @@ export default function AllPostsPage() {
           <h1 className="text-3xl font-black text-slate-900 font-serif">All Posts</h1>
           <p className="text-slate-500 font-medium">Manage your editorial content</p>
         </div>
-        <Link href="/admin/create" className="bg-slate-900 text-white px-6 py-3 rounded-lg font-bold text-sm uppercase hover:bg-red-700 transition-colors">
-          + New Article
-        </Link>
+        <div className="flex gap-3">
+            {/* LINK TO TRASH PAGE */}
+            <Link href="/admin/posts/trash" className="bg-white border border-slate-200 text-slate-600 px-4 py-3 rounded-lg font-bold text-sm uppercase hover:bg-slate-50 transition-colors flex items-center gap-2">
+                <ArchiveRestore size={18} /> Trash
+            </Link>
+            <Link href="/admin/create" className="bg-slate-900 text-white px-6 py-3 rounded-lg font-bold text-sm uppercase hover:bg-red-700 transition-colors">
+            + New Article
+            </Link>
+        </div>
       </header>
 
       {/* FILTERS */}
@@ -104,10 +110,16 @@ export default function AllPostsPage() {
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <button type="button" aria-label={`Edit ${post.title}`} title={`Edit ${post.title}`} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                    {/* FIXED: LINK TO EDIT PAGE */}
+                    <Link 
+                        href={`/admin/posts/edit/${post.id}`}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit"
+                    >
                       <Edit size={16} />
-                    </button>
-                    <button type="button" onClick={() => handleDelete(post.id)} aria-label={`Delete ${post.title}`} title={`Delete ${post.title}`} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    </Link>
+                    
+                    <button type="button" onClick={() => handleDelete(post.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>

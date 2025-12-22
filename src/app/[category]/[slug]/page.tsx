@@ -1,8 +1,10 @@
+// In your [slug]/page.tsx - FIXED VERSION
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import CommentSection from '@/components/article/CommentSection';
 
 export const revalidate = 0;
 
@@ -11,35 +13,44 @@ export default async function ArticlePage({
 }: { 
   params: Promise<{ category: string; slug: string }> 
 }) {
-  // 1. Await params to access category and slug (Required for Next.js 15+)
   const { category, slug } = await params;
   const decodedCategory = decodeURIComponent(category);
   const categoryForQuery = decodedCategory.replace(/-/g, ' ');
 
-  // DEBUG LOGS: Check your terminal/server console (where you ran npm run dev)
-  console.log("--- DEBUG START ---");
-  console.log("URL Category:", decodedCategory);
-  console.log("URL Slug:", slug);
-
-  // 2. Fetch the article
+  // 1. Fetch the article
   const { data: post, error } = await supabase
     .from("posts")
     .select("*")
-    .ilike("category", categoryForQuery) // ignore 'Politics' vs 'politics'
-    .eq("slug", slug)                   // must match database exactly
+    .ilike("category", categoryForQuery)
+    .eq("slug", slug)
     .single();
 
-  if (error) {
-    console.log("Supabase Error:", error.message);
-  }
-  
-  if (!post) {
-    console.log("Result: No article found in database for this slug.");
-    return notFound(); // This triggers your 404 page
+  if (error || !post) {
+    return notFound();
   }
 
-  console.log("Result: Success! Found article:", post.title);
-  console.log("--- DEBUG END ---");
+  // 2. Check if comments are enabled from site_settings
+  const { data: settings } = await supabase
+    .from("site_settings")
+    .select("public_comments")
+    .eq("id", 1)
+    .single();
+
+  const commentsEnabled = settings?.public_comments || false;
+
+  // 3. Fetch existing comments for this post WITH PROFILES
+  const { data: comments } = await supabase
+    .from("comments")
+    .select(`
+      *,
+      profiles (
+        full_name,
+        username,
+        avatar_url
+      )
+    `)
+    .eq("post_id", post.id) // Make sure this matches your posts.id type!
+    .order("created_at", { ascending: false });
 
   return (
     <main className="min-h-screen bg-[#fcfcfc] py-12 font-serif">
@@ -89,9 +100,18 @@ export default async function ArticlePage({
 
         {/* Article Body */}
         <div 
-          className="prose prose-lg prose-slate max-w-none font-sans leading-relaxed text-slate-800"
+          className="prose prose-lg prose-slate max-w-none font-sans leading-relaxed text-slate-800 mb-12"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* Comments Section - FIXED PROP PASSING */}
+        <div className="mt-16 border-t border-slate-200 pt-12">
+          <CommentSection
+            articleId={post.id.toString()}
+            initialComments={comments || []}
+            commentsEnabled={commentsEnabled}
+          />
+        </div>
       </article>
     </main>
   );

@@ -4,10 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Menu, User, X } from 'lucide-react';
+// Import the modal from the same directory (layout/)
+import SubscribeModal from './SubscribeModal';
 
 export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // New state for handling the modal
+  const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
@@ -97,9 +101,14 @@ export function Navbar() {
             <Link href="/login" className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
               <User className="h-5 w-5" />
             </Link>
-            <Link href="/subscribe" className="hidden sm:block ml-2 rounded-full bg-slate-900 px-6 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-slate-800 transition-colors">
+
+            {/* UPDATED: Subscribe Button triggers Modal */}
+            <button 
+              onClick={() => setIsSubscribeOpen(true)}
+              className="hidden sm:block ml-2 rounded-full bg-slate-900 px-6 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-slate-800 transition-colors"
+            >
               Subscribe
-            </Link>
+            </button>
           </div>
         </div>
       </header>
@@ -108,20 +117,26 @@ export function Navbar() {
       {isMenuOpen && (
         <div className="fixed inset-0 z-40 bg-white pt-20 px-6 md:hidden animate-in slide-in-from-top-10 duration-200">
            <nav className="flex flex-col gap-6 text-xl font-black font-serif text-slate-900">
-              {navLinks.map((link) => (
-                <Link 
-                  key={link.href} 
-                  href={link.href} 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="border-b border-slate-100 pb-2"
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <Link href="/login" onClick={() => setIsMenuOpen(false)} className="text-red-600 pt-4">Sign In</Link>
+             {navLinks.map((link) => (
+               <Link 
+                 key={link.href} 
+                 href={link.href} 
+                 onClick={() => setIsMenuOpen(false)}
+                 className="border-b border-slate-100 pb-2"
+               >
+                 {link.name}
+               </Link>
+             ))}
+             <Link href="/login" onClick={() => setIsMenuOpen(false)} className="text-red-600 pt-4">Sign In</Link>
            </nav>
         </div>
       )}
+
+      {/* RENDER THE MODAL */}
+      <SubscribeModal 
+        isOpen={isSubscribeOpen} 
+        onClose={() => setIsSubscribeOpen(false)} 
+      />
     </>
   );
 }
