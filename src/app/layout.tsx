@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs"; // 1. Import Clerk
+// FIX: Clerk import removed
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -20,18 +20,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // 2. Wrap the entire app
-    <ClerkProvider>
-      <html lang="en">
-        <body 
-          className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-slate-50 text-slate-900`}
-          suppressHydrationWarning={true}
-        >
-          <Navbar />
-          {children}
-          <Footer />
-        </body>
-      </html>
-    </ClerkProvider>
+    // FIX: ClerkProvider wrapper removed
+    <html lang="en">
+      <body 
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-slate-50 text-slate-900`}
+        suppressHydrationWarning={true}
+      >
+        <Navbar />
+        {children}
+        <Footer />
+      </body>
+    </html>
   );
 }
