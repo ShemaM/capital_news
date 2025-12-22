@@ -18,7 +18,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co', // Allows placeholder images
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co', // Allow all Supabase projects
+      },
+      
     ],
   },
 };
