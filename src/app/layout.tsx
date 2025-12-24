@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 // FIX: Clerk import removed
+// @ts-expect-error - allow side-effect global CSS import without type declarations
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -21,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     // FIX: ClerkProvider wrapper removed
-    <html lang="en">
+    <html lang="en" data-theme = "corporate"> {/*Added data-theme for daisyUI themeing*/}
       <body 
         className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-slate-50 text-slate-900`}
         suppressHydrationWarning={true}
