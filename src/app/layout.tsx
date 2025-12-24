@@ -21,10 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // FIX: ClerkProvider wrapper removed
-    <html lang="en" data-theme = "corporate"> {/*Added data-theme for daisyUI themeing*/}
+  
+    <html lang="en" data-theme="corporate">
       <body 
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-slate-50 text-slate-900`}
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-sky-500 text-slate-900`}
         suppressHydrationWarning={true}
       >
         <Navbar />
